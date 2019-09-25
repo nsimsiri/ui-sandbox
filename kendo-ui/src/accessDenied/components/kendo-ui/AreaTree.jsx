@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import { TreeView } from "@progress/kendo-react-treeview";
 
 const stub = [
@@ -199,34 +199,40 @@ const stub = [
  ];
 
 const AreaTreeComponent = (props) => {
+    let [id2area ,setId2Area] = useState({});
+    let [id2Node, setId2Node] = useState({});
+    let [tree, setTree] = useState([]);
+    const ROOT = -1;
 
-    const renderTree = data => {
-        let areas = data[0]["Areas"];
-        let g = {}
+    const buildGraph = (areas) => {
+        let g = {};
         let id2area = {};
-        const ROOT = -1;
-        const _buildGraph = (areas) => {
-            for (var k in areas){
-                let area = areas[k];
-                let c = area["AreaId"];
-                let p = area["ParentAreaId"];
-                p = (p == null) ? ROOT : p;
-                if (p in g ) {
-                    if (g[p].includes(c)){
-                        continue;
-                    }
-                    g[p].push(c);
-                } 
-                else g[p] = [c];
-                id2area[c] = area;
-                let neighbors = area["Areas"];
-                if (neighbors && neighbors.length && neighbors.length > 0){
-                    _buildGraph(neighbors);
+        for (var k in areas){
+            let area = areas[k];
+            let c = area["AreaId"];
+            let p = area["ParentAreaId"];
+            p = (p == null) ? ROOT : p;
+            if (p in g ) {
+                if (g[p].includes(c)){
+                    continue;
                 }
+                g[p].push(c);
+            } 
+            else g[p] = [c];
+            id2area[c] = area;
+            let neighbors = area["Areas"];
+            if (neighbors && neighbors.length && neighbors.length > 0){
+                buildGraph(neighbors);
             }
-        }   
+        }
+        return [id2area, g];
+    }   
+
+    const renderTree = (g, id2area) => {
+        let id2Node = {};
         const _renderTree = (g, id2area, neighbors) => {
             let out = [];
+            
             for (let k in neighbors){
                 let id = neighbors[k];
                 let node = id2area[id];
@@ -234,41 +240,90 @@ const AreaTreeComponent = (props) => {
                     text: node["Name"],
                     expanded: true,
                     items: null, 
+                    checked: false,
+                    id: id,
+                    pid: node["ParentAreaId"]
                 }
                 
                 let nextNeighbors = g[id];
                 if (nextNeighbors && nextNeighbors.length){
                     out_i["items"] = _renderTree(g, id2area, nextNeighbors);
                 }
-                out.push(out_i);
+                out.push(out_i)
+                id2Node[id] = out_i;
             }
+
             return out;
         }
-        _buildGraph(areas);
-        const tree =  _renderTree(g, id2area, g[ROOT])
-        return tree;
+        let tree =  _renderTree(g, id2area, g[ROOT])
+        return [tree, id2Node];
     }
 
     const onExpandChange = (event) => {
         event.item.expanded = !event.item.expanded;
-    
     } 
 
     const onItemClick = (event) => {
         event.item.selected = !event.item.selected;
-        // this.forceUpdate();
     }
 
-    renderTree(stub);
+    const onCheckChange = (event) => {
+        console.log(event.item);
+        event.item.checked = !event.item.checked;
+        const checkVal = event.item.checked;
+
+        const checkSubtree = (node) => {
+            node.checked = checkVal;
+            if (node.items && node.items.length > 0){
+                for(let i in node.items){
+                    checkSubtree(node.items[i]);
+                }
+            }
+        }
+
+        const checkUplevel = node => {
+            console.log(node.pid, id2Node)
+            if (node.pid == null) return;
+            const pnode = id2Node[node.pid];
+            const items = pnode.items;
+            let allTrue = true;
+            for (let i in items){
+                if (!items[i].checked){
+                    pnode.checked = false;
+                    allTrue = false;
+                    break;
+                }
+            }
+            if (allTrue){
+                pnode.checked = true;
+            }
+        }
+        checkSubtree(event.item);
+        checkUplevel(event.item);
+    }
+
+    useEffect(() => {
+        let data = stub;
+        let areas = data[0]["Areas"];
+        let [id2area, g] = buildGraph(areas);
+        
+        let [tree, id2Node] = renderTree(g, id2area);
+        setId2Node(id2Node);
+        setId2Area(id2area);
+        setTree(tree);
+
+    }, []);
+
     return ( 
         <div>
         <hr />
-        <h3>AreaTreeComponent - Kendo TreeView POC</h3>
+        <h3>Kendo TreeView</h3>
         <TreeView
-                data={renderTree(stub)}
+                data={tree}
                 expandIcons={true}
                 onExpandChange={onExpandChange}
                 onItemClick={onItemClick}
+                onCheckChange={onCheckChange}
                 aria-multiselectable={true}
                 checkboxes={true}
             />  

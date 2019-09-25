@@ -56,7 +56,7 @@ const BomLineItemListComponent = () => {
     const imgPath = productInfo["ProductDisplayInfoLargeImagePath"];
     return (
       <td>
-        <img src={imgPath} alt="" />
+        <img src={imgPath} alt="" style={{"max-width": "50%", "display" :"block", "margin" :"auto"}}/>
       </td>
     );
   };
@@ -123,7 +123,7 @@ const BomLineItemListComponent = () => {
   return (
     <div>
       <hr />
-      <h1>BomLineItemList - Kendo React DataGrid POC</h1>
+      <h3>Kendo React DataGrid POC</h3>
       <hr />
       <Grid
         style={{ height: "700px" }}
@@ -136,8 +136,8 @@ const BomLineItemListComponent = () => {
         onItemChange={onEdit}
       >
         <Column field="selected" />
-        <Column field="Item" title="Item" cell={RowItemCell} width="250%" />
-        <Column field="Details" title="Details" cell={RowDetailsCell} width="200%"/>
+        <Column field="Item" title="Item" cell={RowItemCell} width="150%" />
+        <Column field="Details" title="Details" cell={RowDetailsCell} width="300%"/>
         <Column field="Quantity" title="Qty" editor="numeric" width="100%" />
         <Column field="Price" title="List Price/unit" editable={false} />
       </Grid>
